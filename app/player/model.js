@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const HASH_ROUND = 10;
 
 const playerSchema = mongoose.Schema({
     email: {
@@ -11,7 +13,7 @@ const playerSchema = mongoose.Schema({
         minLength: 3,
         maxLength: 40,
     },
-    name: {
+    username: {
         type: String,
         require: [true, 'Nama harus disi'],
         minLength: 3,
@@ -48,5 +50,23 @@ const playerSchema = mongoose.Schema({
         ref: 'Category',
     },
 }, { timestamps: true });
+
+playerSchema.path('email').validate(
+    async function(value) {
+        try {
+            const count = await this.model('Player').countDocuments({ email: value });
+
+            return !count;
+        } catch (error) {
+            throw error;
+        }
+    },
+    (attr) => `${attr.value} sudah terdaftar`
+);
+
+playerSchema.pre('save', function(next) {
+    this.password = bcrypt.hashSync(this.password, HASH_ROUND);
+    next();
+});
 
 module.exports = mongoose.model('Player', playerSchema);
